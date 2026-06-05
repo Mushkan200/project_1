@@ -80,10 +80,10 @@ const renderInsights = data => {
   for(let i=0;i<n;i++){const a=xs[i]-mx,b=ys[i]-my; num+=a*b; dx+=a*a; dy+=b*b;}
   const corr = dx && dy ? +(num/Math.sqrt(dx*dy)).toFixed(2) : 0;
   el('insights').innerHTML = `
-    <div class="insight-item"><small>Top cohort</small><strong>${classAverages[0].c} leads with ${classAverages[0].a}% average marks</strong></div>
-    <div class="insight-item"><small>Relationship</small><strong>Attendance vs marks correlation: ${corr}</strong></div>
-    <div class="insight-item"><small>Risk signal</small><strong>${risk.length} students need follow-up support</strong></div>
-    <div class="insight-item"><small>Highest score</small><strong>${best.name} has the strongest score at ${best.marks}%</strong></div>
+    <div class="insight-item"><small>Top cohort</small><strong>${classAverages[0].c} leads with ${classAverages[0].a}% average marks</strong><p>Highest average class in the current view.</p></div>
+    <div class="insight-item"><small>Relationship</small><strong>Attendance vs marks correlation: ${corr}</strong><p>Shows whether attendance and marks rise together.</p></div>
+    <div class="insight-item"><small>Risk signal</small><strong>${risk.length} students need follow-up support</strong><p>These students may need extra attention.</p></div>
+    <div class="insight-item"><small>Highest score</small><strong>${best.name} has the strongest score at ${best.marks}%</strong><p>Top performer in the current slice.</p></div>
   `;
 };
 
@@ -94,7 +94,8 @@ const renderCharts = data => {
     x: byClass.map(d=>d.className),
     y: byClass.map(d=>d.marks),
     type:'bar',
-    marker:{color: byClass.map(d => d.marks), colorscale:[[0,c.getPropertyValue('--warning').trim()],[1,c.getPropertyValue('--primary').trim()]]}
+    marker:{color: byClass.map(d => d.marks), colorscale:[[0,c.getPropertyValue('--warning').trim()],[1,c.getPropertyValue('--primary').trim()]]},
+    hovertemplate:'%{x}<br>Average Marks: %{y}%<extra></extra>'
   }], {
     paper_bgcolor:'transparent',
     plot_bgcolor:'transparent',
@@ -125,7 +126,8 @@ const renderCharts = data => {
     text: data.map(s => s.name),
     mode:'markers',
     type:'scatter',
-    marker:{size: data.map(s => 10 + s.study * 2), color: data.map(s => s.study), colorscale:'Tealgrn', showscale:true}
+    marker:{size: data.map(s => 10 + s.study * 2), color: data.map(s => s.study), colorscale:'Tealgrn', showscale:true},
+    hovertemplate:'%{text}<br>Attendance: %{x}%<br>Marks: %{y}%<extra></extra>'
   }], {
     paper_bgcolor:'transparent',
     plot_bgcolor:'transparent',
@@ -140,7 +142,9 @@ const renderCharts = data => {
     y: data.filter(s => s.band === b).map(s => s.study),
     name: b,
     type:'box',
-    boxpoints:'all'
+    boxpoints:'all',
+    jitter:.35,
+    pointpos:0
   })), {
     paper_bgcolor:'transparent',
     plot_bgcolor:'transparent',
