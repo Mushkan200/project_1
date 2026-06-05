@@ -16,7 +16,7 @@ at_risk_students = df[(df["marks"] < 60) | (df["attendance"] < 75)]
 
 X = df[["attendance", "study_hours"]]
 y = df["marks"]
-model = RandomForestRegressor(random_state=42)
+model = RandomForestRegressor(n_estimators=100, random_state=42)
 model.fit(X, y)
 
 predicted_score = model.predict([[85, 3.5]])[0]
