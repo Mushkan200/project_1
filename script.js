@@ -18,13 +18,14 @@ const students = [
 
 const bandOrder = ['Needs Support','Average','Good','Excellent'];
 const state = {className:'All', band:'All', attendance:'All', sortBy:'marks-desc'};
-const avg = arr => arr.length ? +(arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1) : 0;
-const pillClass = band => band === 'Excellent' ? 'exc' : band === 'Good' ? 'good' : band === 'Average' ? 'avg' : 'support';
-const attendanceZoneOf = a => a >= 90 ? '90% and above' : a >= 75 ? '75% to 89%' : 'Below 75%';
 const el = id => document.getElementById(id);
 const root = document.documentElement;
-const isMobile = () => window.matchMedia('(max-width: 768px)').matches;
+const isMobile = () => window.matchMedia('(max-width: 899px)').matches;
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const avg = arr => arr.length ? +(arr.reduce((a,b) => a + b, 0) / arr.length).toFixed(1) : 0;
+const pillClass = band => band === 'Excellent' ? 'exc' : band === 'Good' ? 'good' : band === 'Average' ? 'avg' : 'support';
+const attendanceZoneOf = a => a >= 90 ? '90% and above' : a >= 75 ? '75% to 89%' : 'Below 75%';
 
 const filteredData = () => {
   let data = [...students];
@@ -77,20 +78,20 @@ const renderInsights = data => {
   }
 
   const classAverages = [...new Set(data.map(s => s.className))]
-    .map(c => ({c, a: avg(data.filter(x => x.className === c).map(x => x.marks))}))
-    .sort((a,b)=>b.a-a.a);
+    .map(c => ({ c, a: avg(data.filter(x => x.className === c).map(x => x.marks)) }))
+    .sort((a,b) => b.a - a.a);
 
-  const best = [...data].sort((a,b)=>b.marks-a.marks)[0];
+  const best = [...data].sort((a,b) => b.marks - a.marks)[0];
   const risk = data.filter(s => s.marks < 60 || s.attendance < 75);
 
   const xs = data.map(s => s.attendance), ys = data.map(s => s.marks), n = xs.length;
   const mx = avg(xs), my = avg(ys);
-  let num=0, dx=0, dy=0;
-  for(let i=0;i<n;i++){
-    const a=xs[i]-mx, b=ys[i]-my;
-    num+=a*b; dx+=a*a; dy+=b*b;
+  let num = 0, dx = 0, dy = 0;
+  for (let i = 0; i < n; i++) {
+    const a = xs[i] - mx, b = ys[i] - my;
+    num += a * b; dx += a * a; dy += b * b;
   }
-  const corr = dx && dy ? +(num/Math.sqrt(dx*dy)).toFixed(2) : 0;
+  const corr = dx && dy ? +(num / Math.sqrt(dx * dy)).toFixed(2) : 0;
 
   el('insights').innerHTML = `
     <div class="insight-item"><small>Top cohort</small><strong>${classAverages[0].c} leads with ${classAverages[0].a}% average marks</strong><p>Highest average class in the current view.</p></div>
@@ -104,11 +105,11 @@ const layoutBase = () => {
   const c = getComputedStyle(root);
   const mobile = isMobile();
   return {
-    paper_bgcolor:'transparent',
-    plot_bgcolor:'transparent',
-    font:{family:'Inter, sans-serif', size: mobile ? 11 : 13, color:c.getPropertyValue('--text').trim()},
-    margin: mobile ? {t:30,r:10,b:40,l:38} : {t:40,r:20,b:45,l:50},
-    title:{x:0, font:{size: mobile ? 14 : 16}}
+    paper_bgcolor: 'transparent',
+    plot_bgcolor: 'transparent',
+    font: { family: 'Inter, sans-serif', size: mobile ? 11 : 13, color: c.getPropertyValue('--text').trim() },
+    margin: mobile ? { t: 30, r: 10, b: 40, l: 38 } : { t: 40, r: 20, b: 45, l: 50 },
+    title: { x: 0, font: { size: mobile ? 14 : 16 } }
   };
 };
 
@@ -117,33 +118,33 @@ const renderCharts = data => {
   const mobile = isMobile();
 
   const byClass = [...new Set(data.map(s => s.className))]
-    .map(className => ({className, marks: avg(data.filter(s => s.className === className).map(s => s.marks))}));
+    .map(className => ({ className, marks: avg(data.filter(s => s.className === className).map(s => s.marks)) }));
 
   Plotly.react('marksByClass', [{
-    x: byClass.map(d=>d.className),
-    y: byClass.map(d=>d.marks),
-    type:'bar',
-    marker:{
+    x: byClass.map(d => d.className),
+    y: byClass.map(d => d.marks),
+    type: 'bar',
+    marker: {
       color: byClass.map(d => d.marks),
-      colorscale:[[0,c.getPropertyValue('--warning').trim()],[1,c.getPropertyValue('--primary').trim()]]
+      colorscale: [[0, c.getPropertyValue('--warning').trim()], [1, c.getPropertyValue('--primary').trim()]]
     },
-    hovertemplate:'%{x}<br>Average Marks: %{y}%<extra></extra>'
+    hovertemplate: '%{x}<br>Average Marks: %{y}%<extra></extra>'
   }], {
     ...layoutBase(),
-    yaxis:{title:'Marks %', gridcolor:c.getPropertyValue('--border').trim(), tickfont:{size: mobile ? 10 : 12}},
-    xaxis:{showgrid:false, tickfont:{size: mobile ? 10 : 12}},
-    title:{text:'Average Marks by Class', x:0, font:{size: mobile ? 14 : 16}}
-  }, {responsive:true, displayModeBar:false});
+    yaxis: { title: 'Marks %', gridcolor: c.getPropertyValue('--border').trim(), tickfont: { size: mobile ? 10 : 12 } },
+    xaxis: { showgrid: false, tickfont: { size: mobile ? 10 : 12 } },
+    title: { text: 'Average Marks by Class', x: 0, font: { size: mobile ? 14 : 16 } }
+  }, { responsive: true, displayModeBar: false });
 
   Plotly.react('performanceBand', [{
     labels: bandOrder,
     values: bandOrder.map(b => data.filter(s => s.band === b).length),
-    type:'pie',
-    hole:.62,
-    sort:false,
+    type: 'pie',
+    hole: .62,
+    sort: false,
     textinfo: mobile ? 'label+percent' : 'label+value',
-    marker:{
-      colors:[
+    marker: {
+      colors: [
         c.getPropertyValue('--danger').trim(),
         c.getPropertyValue('--warning').trim(),
         c.getPropertyValue('--accent').trim(),
@@ -152,49 +153,49 @@ const renderCharts = data => {
     }
   }], {
     ...layoutBase(),
-    title:{text:'Performance Bands', x:0, font:{size: mobile ? 14 : 16}},
+    title: { text: 'Performance Bands', x: 0, font: { size: mobile ? 14 : 16 } },
     showlegend: !mobile,
-    legend:{orientation: mobile ? 'h' : 'v', x:0, y: mobile ? -0.15 : 1}
-  }, {responsive:true, displayModeBar:false});
+    legend: { orientation: mobile ? 'h' : 'v', x: 0, y: mobile ? -0.15 : 1 }
+  }, { responsive: true, displayModeBar: false });
 
   Plotly.react('attendanceScatter', [{
     x: data.map(s => s.attendance),
     y: data.map(s => s.marks),
     text: data.map(s => s.name),
-    mode:'markers',
-    type:'scatter',
-    marker:{
+    mode: 'markers',
+    type: 'scatter',
+    marker: {
       size: data.map(s => mobile ? 8 + s.study * 1.4 : 10 + s.study * 2),
       color: data.map(s => s.study),
-      colorscale:'Tealgrn',
+      colorscale: 'Tealgrn',
       showscale: !mobile
     },
-    hovertemplate:'%{text}<br>Attendance: %{x}%<br>Marks: %{y}%<extra></extra>'
+    hovertemplate: '%{text}<br>Attendance: %{x}%<br>Marks: %{y}%<extra></extra>'
   }], {
     ...layoutBase(),
-    yaxis:{title:'Marks %', gridcolor:c.getPropertyValue('--border').trim(), tickfont:{size: mobile ? 10 : 12}},
-    xaxis:{title:'Attendance %', gridcolor:c.getPropertyValue('--border').trim(), tickfont:{size: mobile ? 10 : 12}},
-    title:{text:'Attendance vs Marks', x:0, font:{size: mobile ? 14 : 16}}
-  }, {responsive:true, displayModeBar:false});
+    yaxis: { title: 'Marks %', gridcolor: c.getPropertyValue('--border').trim(), tickfont: { size: mobile ? 10 : 12 } },
+    xaxis: { title: 'Attendance %', gridcolor: c.getPropertyValue('--border').trim(), tickfont: { size: mobile ? 10 : 12 } },
+    title: { text: 'Attendance vs Marks', x: 0, font: { size: mobile ? 14 : 16 } }
+  }, { responsive: true, displayModeBar: false });
 
   Plotly.react('studyHoursBox', bandOrder.map(b => ({
     y: data.filter(s => s.band === b).map(s => s.study),
     name: b,
-    type:'box',
+    type: 'box',
     boxpoints: mobile ? false : 'all',
-    jitter:.35,
-    pointpos:0
+    jitter: .35,
+    pointpos: 0
   })), {
     ...layoutBase(),
-    yaxis:{title:'Study Hours', gridcolor:c.getPropertyValue('--border').trim(), tickfont:{size: mobile ? 10 : 12}},
-    title:{text:'Study Hours by Band', x:0, font:{size: mobile ? 14 : 16}},
+    yaxis: { title: 'Study Hours', gridcolor: c.getPropertyValue('--border').trim(), tickfont: { size: mobile ? 10 : 12 } },
+    title: { text: 'Study Hours by Band', x: 0, font: { size: mobile ? 14 : 16 } },
     showlegend: !mobile
-  }, {responsive:true, displayModeBar:false});
+  }, { responsive: true, displayModeBar: false });
 };
 
 const exportCsv = data => {
-  const csv = ['Student ID,Name,Class,Marks,Attendance,Study Hours,Performance Band', ...data.map(s => [s.id,s.name,s.className,s.marks,s.attendance,s.study,s.band].join(','))].join('\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const csv = ['Student ID,Name,Class,Marks,Attendance,Study Hours,Performance Band', ...data.map(s => [s.id, s.name, s.className, s.marks, s.attendance, s.study, s.band].join(','))].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'student-performance.csv';
@@ -231,7 +232,7 @@ const update = () => {
 };
 
 const themeToggle = () => {
-  root.setAttribute('data-theme', root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  root.setAttribute('data-theme', root.getAttribute('data-theme') === 'aurora' ? 'sunset' : 'aurora');
   update();
 };
 
