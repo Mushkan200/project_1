@@ -23,7 +23,6 @@ const pillClass = band => band === 'Excellent' ? 'exc' : band === 'Good' ? 'good
 const attendanceZoneOf = a => a >= 90 ? '90% and above' : a >= 75 ? '75% to 89%' : 'Below 75%';
 const el = id => document.getElementById(id);
 const root = document.documentElement;
-
 const isMobile = () => window.matchMedia('(max-width: 768px)').matches;
 
 const filteredData = () => {
