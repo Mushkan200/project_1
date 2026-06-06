@@ -57,9 +57,9 @@ img,svg,video,canvas{
 .topbar{
   position:sticky;
   top:0;
-  z-index:20;
-  background:color-mix(in srgb,var(--bg) 84%,transparent);
-  backdrop-filter:blur(14px);
+  z-index:50;
+  background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:blur(16px);
   border-bottom:1px solid color-mix(in srgb,var(--border) 80%,transparent);
 }
 
@@ -68,33 +68,53 @@ img,svg,video,canvas{
   align-items:center;
   justify-content:space-between;
   gap:1rem;
-  padding:1rem 0;
+  padding:.95rem 0;
 }
 
 .brand{
   display:flex;
   align-items:center;
   gap:.9rem;
+  min-width:0;
 }
 
 .brand-mark{
-  width:46px;
-  height:46px;
+  width:48px;
+  height:48px;
   border-radius:16px;
   display:grid;
   place-items:center;
   background:linear-gradient(135deg,var(--primary),var(--accent));
   color:#fff;
   font-weight:800;
+  flex:0 0 auto;
 }
 
-.brand-title{font-weight:800}
-.brand-subtitle,.eyebrow,.lead,.hero-panel li,.section-head p,.kpi small,.table-wrap,.table-head p,.insight-item p{color:var(--muted)}
+.brand-copy{
+  min-width:0;
+}
+
+.brand-title{
+  font-size:1rem;
+  font-weight:800;
+  line-height:1.2;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.brand-subtitle{
+  font-size:.86rem;
+  line-height:1.2;
+  color:var(--muted);
+}
 
 .header-actions{
   display:flex;
+  align-items:center;
   gap:.75rem;
   flex-wrap:wrap;
+  justify-content:flex-end;
 }
 
 .btn{
@@ -148,9 +168,10 @@ select:focus-visible{
   letter-spacing:.14em;
   font-size:.78rem;
   font-weight:800;
+  color:var(--muted);
 }
 
-.lead{max-width:66ch}
+.lead{max-width:66ch;color:var(--muted)}
 
 .hero-panel{
   padding:1.1rem;
@@ -161,6 +182,7 @@ select:focus-visible{
 
 .hero-panel ol{
   margin:.8rem 0 0 1.1rem;
+  color:var(--muted);
 }
 
 .hero-tags{
@@ -193,6 +215,11 @@ select:focus-visible{
 .section-head h2,.table-head h2,.insight-card h2{
   margin:0;
   font-family:var(--font-display);
+}
+
+.section-head p{
+  margin:.25rem 0 0;
+  color:var(--muted);
 }
 
 .filter-grid{
@@ -403,6 +430,10 @@ th{
   th,td{
     padding:.75rem .6rem;
   }
+
+  .brand-title{
+    white-space:normal;
+  }
 }
 
 /* Small phones */
@@ -413,6 +444,10 @@ th{
 
   .chart{
     min-height:250px;
+  }
+
+  .brand-subtitle{
+    display:none;
   }
 
   .topbar{
