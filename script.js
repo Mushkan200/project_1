@@ -24,6 +24,7 @@ const attendanceZoneOf = a => a >= 90 ? '90% and above' : a >= 75 ? '75% to 89%'
 const el = id => document.getElementById(id);
 const root = document.documentElement;
 const isMobile = () => window.matchMedia('(max-width: 768px)').matches;
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const filteredData = () => {
   let data = [...students];
@@ -201,6 +202,26 @@ const exportCsv = data => {
   URL.revokeObjectURL(a.href);
 };
 
+function animateCount(node, target, duration = 1200) {
+  if (prefersReducedMotion) {
+    node.textContent = target;
+    return;
+  }
+  const targetValue = Number(target);
+  const isDecimal = String(target).includes('.');
+  const startTime = performance.now();
+
+  function tick(now) {
+    const progress = Math.min((now - startTime) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const value = targetValue * eased;
+    node.textContent = isDecimal ? value.toFixed(1) : Math.round(value);
+    if (progress < 1) requestAnimationFrame(tick);
+  }
+
+  requestAnimationFrame(tick);
+}
+
 const update = () => {
   const data = filteredData();
   populateKPIs(data);
@@ -216,8 +237,12 @@ const themeToggle = () => {
 
 document.addEventListener('DOMContentLoaded', () => {
   fillFilters();
+  animateCount(el('heroStat1'), 15, 1000);
+  animateCount(el('heroStat2'), 4, 900);
+  animateCount(el('heroStat3'), 1, 800);
   update();
-  document.getElementById('themeToggle').addEventListener('click', themeToggle);
-  document.getElementById('exportCsv').addEventListener('click', () => exportCsv(filteredData()));
+  el('themeToggle').addEventListener('click', themeToggle);
+  el('exportCsv').addEventListener('click', () => exportCsv(filteredData()));
+  el('exportCsvHero').addEventListener('click', () => exportCsv(filteredData()));
   window.addEventListener('resize', () => renderCharts(filteredData()));
 });
