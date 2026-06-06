@@ -19,12 +19,10 @@
     <div class="topbar-accent"></div>
     <div class="container topbar-inner">
       <div class="brand">
-        <div class="brand-mark">
-          <span>SP</span>
-        </div>
+        <div class="brand-mark"><span>D</span></div>
         <div class="brand-copy">
           <div class="brand-title">Student Performance Insights</div>
-          <div class="brand-subtitle">Dark analytics dashboard</div>
+          <div class="brand-subtitle">Dashboard</div>
         </div>
       </div>
 
@@ -37,26 +35,52 @@
 
   <main id="main" class="container page-grid">
     <section class="hero card">
-      <div>
-        <p class="eyebrow">Python analytics • student data • easy insights</p>
-        <h1>Friendly dashboard for academic performance</h1>
-        <p class="lead">This version focuses on readability, smoother navigation, and simple explanations so any user can understand the data quickly.</p>
+      <div class="hero-copy">
+        <p class="eyebrow">Student analytics dashboard</p>
+        <h1>Track student performance at a glance</h1>
+        <p class="lead">
+          Filter classes, compare trends, and identify students who need support — all in one simple dashboard.
+        </p>
+
+        <div class="hero-actions">
+          <a href="#filters" class="btn btn-primary">Explore Dashboard</a>
+          <button id="exportCsvHero" class="btn btn-ghost">Export Data</button>
+        </div>
+
         <div class="hero-tags">
-          <span>Easy filters</span><span>Readable charts</span><span>Clean insights</span><span>CSV export</span>
+          <span>Fast filtering</span>
+          <span>Responsive charts</span>
+          <span>Simple insights</span>
         </div>
       </div>
+
       <aside class="hero-panel">
-        <h2>How to use</h2>
+        <div class="hero-panel-badge">Quick guide</div>
+        <h2>How to get started</h2>
         <ol>
-          <li>Select filters to narrow the data.</li>
-          <li>Review the KPI cards.</li>
-          <li>Read the insight notes.</li>
-          <li>Export the visible data if needed.</li>
+          <li>Choose a class or band.</li>
+          <li>Review the KPI summary.</li>
+          <li>Check charts and insights.</li>
         </ol>
+
+        <div class="hero-panel-stats">
+          <div>
+            <strong id="heroStat1">0</strong>
+            <span>Students</span>
+          </div>
+          <div>
+            <strong id="heroStat2">0</strong>
+            <span>Filters</span>
+          </div>
+          <div>
+            <strong id="heroStat3">0</strong>
+            <span>Export</span>
+          </div>
+        </div>
       </aside>
     </section>
 
-    <section class="filters card">
+    <section id="filters" class="filters card">
       <div class="section-head">
         <div>
           <h2>Filter data</h2>
