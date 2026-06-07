@@ -24,24 +24,27 @@ function calcBand(marks){
   return 'At-Risk';
 }
 
+function clamp(v, min, max){ return Math.min(max, Math.max(min, Number.isFinite(v) ? v : min)); }
+
 function normalizeStudent(s, idxFallback = 1){
   const name = String(s.name ?? s.Name ?? '').trim();
   const cls = String(s.class ?? s.Class ?? s.className ?? s.ClassName ?? '').trim();
   const marks = Number(s.marks ?? s.Marks ?? 0);
   const attendance = Number(s.attendance ?? s.Attendance ?? 0);
-  const study = Number(s.study_hours ?? s.studyHours ?? s.study ?? s['study hrs'] ?? s['Study Hrs'] ?? 0);
+  const study = Number(s.study_hours ?? s.studyHours ?? s.study ?? s["study hrs"] ?? s["Study Hrs"] ?? 0);
   const id = String(s.id ?? s.ID ?? `ST${String(idxFallback).padStart(3,'0')}`).trim();
   const band = s.band || calcBand(marks);
+
   return {
-    id, name, className: cls,
+    id,
+    name,
+    className: cls,
     marks: clamp(marks, 0, 100),
     attendance: clamp(attendance, 0, 100),
     studyHours: clamp(study || 0, 0, 20) || 0,
     band
   };
 }
-
-function clamp(v, min, max){ return Math.min(max, Math.max(min, Number.isFinite(v) ? v : min)); }
 
 function seedData(){
   students = [
@@ -116,7 +119,10 @@ function validateStudent(){
   setErr('err-marks', Number.isFinite(marks) && marks >= 0 && marks <= 100 ? '' : 'Marks must be between 0 and 100.');
   setErr('err-attend', Number.isFinite(attend) && attend >= 0 && attend <= 100 ? '' : 'Attendance must be between 0 and 100.');
 
-  if(Number.isFinite(hours) && hours > 20) { ok = false; toast('Study hours must be 20 or less', 'error'); }
+  if(Number.isFinite(hours) && hours > 20) {
+    ok = false;
+    toast('Study hours must be 20 or less', 'error');
+  }
   return ok;
 }
 
@@ -216,8 +222,8 @@ function avg(arr, key){
 
 function correlation(xs, ys){
   if(xs.length < 2 || ys.length < 2) return 0;
-  const mx = avg(xs.map(v => ({v})), 'v');
-  const my = avg(ys.map(v => ({v})), 'v');
+  const mx = xs.reduce((a,b)=>a+b,0) / xs.length;
+  const my = ys.reduce((a,b)=>a+b,0) / ys.length;
   let num = 0, dx = 0, dy = 0;
   for(let i=0;i<xs.length;i++){
     const a = xs[i] - mx, b = ys[i] - my;
@@ -275,6 +281,14 @@ function renderCharts(data){
   const bandOrder = ['Distinction', 'Merit', 'Pass', 'At-Risk'];
   const bandCounts = bandOrder.map(b => data.filter(s => s.band === b).length);
 
+  const scatterData = data.map(s => ({
+    x: s.attendance,
+    y: s.marks,
+    label: s.name,
+    cls: s.className,
+    hours: s.studyHours
+  }));
+
   charts.marks = new Chart(el('chart-marks'), {
     type:'bar',
     data:{
@@ -324,7 +338,7 @@ function renderCharts(data){
       animation:{duration:900,easing:'easeOutQuart'},
       plugins:{
         legend:{
-          position: isMobile() ? 'bottom' : 'right',
+          position: window.innerWidth < 700 ? 'bottom' : 'right',
           labels:{color:'#edf4ff', usePointStyle:true, pointStyle:'circle', padding:16}
         },
         tooltip:{callbacks:{label:ctx => ` ${ctx.label}: ${ctx.raw} students`}}
@@ -337,10 +351,10 @@ function renderCharts(data){
     data:{
       datasets:[{
         label:'Students',
-        data:data.map(s => ({x:s.attendance, y:s.marks, label:s.name, cls:s.className, hours:s.studyHours})),
-        pointRadius: data.map(s => Math.max(4, 4 + s.studyHours * 0.7)),
-        pointHoverRadius: data.map(s => Math.max(6, 6 + s.studyHours * 0.7)),
-        backgroundColor:data.map((s,i) => colorByIndex(i)),
+        data:scatterData,
+        pointRadius: scatterData.map(s => Math.max(4, 4 + s.hours * 0.7)),
+        pointHoverRadius: scatterData.map(s => Math.max(6, 6 + s.hours * 0.7)),
+        backgroundColor:scatterData.map((s,i) => colorByIndex(i)),
         borderColor:'rgba(255,255,255,.25)',
         borderWidth:1
       }]
@@ -406,12 +420,6 @@ function bandClass(b){
   if(b === 'Merit') return 'good';
   if(b === 'Pass') return 'avg';
   return 'support';
-}
-
-function refreshFilters(){
-  updateClassOptions();
-  filtered = [...students];
-  applyFilters();
 }
 
 function renderAll(){
@@ -533,16 +541,14 @@ function bindEvents(){
     el(id).addEventListener('input', applyFilters);
     el(id).addEventListener('change', applyFilters);
   });
-  ['inp-marks'].forEach(id => el(id).addEventListener('input', syncBandPreview));
+
+  el('inp-marks').addEventListener('input', syncBandPreview);
 
   document.addEventListener('keydown', e => {
     if(e.key === 'Escape'){
       ['add-modal','csv-modal'].forEach(id => closeModal(id));
     }
   });
-
-  el('csv-modal').addEventListener('click', e => closeModalOutside(e, 'csv-modal'));
-  el('add-modal').addEventListener('click', e => closeModalOutside(e, 'add-modal'));
 }
 
 window.seedData = seedData;
