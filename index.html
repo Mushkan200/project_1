@@ -5,42 +5,403 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Student Performance Insights</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="style.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #161920;
+    --surface2: #1e222d;
+    --border: #2a2f3e;
+    --accent: #6ee7b7;
+    --accent2: #818cf8;
+    --accent3: #fb923c;
+    --danger: #f87171;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --radius: 14px;
+    --font-head: 'Syne', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* NAV */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(13,15,20,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 58px;
+  }
+  .nav-brand {
+    font-family: var(--font-head);
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .nav-brand span {
+    width: 30px; height: 30px;
+    background: var(--accent);
+    color: #0d0f14;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    font-size: 0.75rem;
+    font-weight: 800;
+  }
+  .nav-actions { display: flex; gap: 8px; }
+  .btn {
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-primary {
+    background: var(--accent);
+    color: #0d0f14;
+    font-weight: 600;
+  }
+  .btn-primary:hover { opacity: 0.88; }
+
+  /* HERO */
+  .hero {
+    padding: 3.5rem 1.5rem 2.5rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(110,231,183,0.1);
+    border: 1px solid rgba(110,231,183,0.25);
+    color: var(--accent);
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 1.2rem;
+  }
+  .hero h1 {
+    font-family: var(--font-head);
+    font-size: clamp(1.8rem, 5vw, 3rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    color: #fff;
+    margin-bottom: 0.8rem;
+  }
+  .hero h1 em { color: var(--accent); font-style: normal; }
+  .hero p {
+    color: var(--muted);
+    font-size: 1rem;
+    max-width: 520px;
+    margin-bottom: 1.8rem;
+  }
+  .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  /* MAIN LAYOUT */
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 1.25rem 3rem;
+  }
+
+  /* KPI STRIP */
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 2rem;
+  }
+  @media (min-width: 600px) { .kpis { grid-template-columns: repeat(4, 1fr); } }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.2rem;
+    transition: border-color 0.2s;
+  }
+  .kpi-card:hover { border-color: var(--accent2); }
+  .kpi-label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 6px;
+  }
+  .kpi-value {
+    font-family: var(--font-head);
+    font-size: 1.9rem;
+    font-weight: 800;
+    line-height: 1;
+    color: #fff;
+  }
+  .kpi-value.accent { color: var(--accent); }
+  .kpi-value.accent2 { color: var(--accent2); }
+  .kpi-value.danger { color: var(--danger); }
+  .kpi-sub { font-size: 0.73rem; color: var(--muted); margin-top: 4px; }
+
+  /* SECTION HEADER */
+  .section-head {
+    margin-bottom: 1.2rem;
+  }
+  .section-head h2 {
+    font-family: var(--font-head);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 2px;
+  }
+  .section-head p { font-size: 0.8rem; color: var(--muted); }
+
+  /* FILTERS */
+  .filters {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.2rem;
+    margin-bottom: 1.8rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: flex-end;
+  }
+  .filter-group { display: flex; flex-direction: column; gap: 5px; min-width: 130px; flex: 1; }
+  .filter-group label { font-size: 0.72rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+  select, input[type=range] {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    width: 100%;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  select:focus { border-color: var(--accent2); }
+  .filter-actions { display: flex; gap: 8px; align-items: flex-end; }
+
+  /* CHARTS GRID */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin-bottom: 1.8rem;
+  }
+  @media (min-width: 700px) {
+    .charts-grid { grid-template-columns: 1fr 1fr; }
+    .chart-full { grid-column: 1 / -1; }
+  }
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.2rem;
+  }
+  .chart-card canvas { max-height: 220px; }
+
+  /* INSIGHTS */
+  .insights-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 1.8rem;
+  }
+  @media (min-width: 600px) { .insights-grid { grid-template-columns: 1fr 1fr; } }
+  .insight-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.2rem;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .insight-icon {
+    width: 36px; height: 36px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+  .insight-card h4 { font-size: 0.85rem; font-weight: 600; color: #fff; margin-bottom: 3px; }
+  .insight-card p { font-size: 0.78rem; color: var(--muted); }
+
+  /* TABLE */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .table-search {
+    padding: 1rem 1.2rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .table-search input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 7px 12px;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    outline: none;
+    flex: 1;
+    min-width: 180px;
+    transition: border-color 0.15s;
+  }
+  .table-search input:focus { border-color: var(--accent2); }
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 580px; }
+  thead th {
+    background: var(--surface2);
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody td { padding: 10px 14px; font-size: 0.85rem; white-space: nowrap; }
+  .band-badge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+  .band-Distinction { background: rgba(110,231,183,0.15); color: var(--accent); }
+  .band-Merit { background: rgba(129,140,248,0.15); color: var(--accent2); }
+  .band-Pass { background: rgba(251,146,60,0.15); color: var(--accent3); }
+  .band-At-Risk { background: rgba(248,113,113,0.15); color: var(--danger); }
+  .progress-bar-wrap { width: 80px; background: var(--border); border-radius: 99px; height: 5px; display: inline-block; vertical-align: middle; }
+  .progress-bar { height: 5px; border-radius: 99px; background: var(--accent2); }
+  .pagination {
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid var(--border);
+    font-size: 0.8rem;
+    color: var(--muted);
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .page-btns { display: flex; gap: 6px; }
+  .page-btn {
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 0.78rem;
+    transition: all 0.12s;
+  }
+  .page-btn:hover, .page-btn.active { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+  .page-btn:disabled { opacity: 0.35; cursor: default; }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 20px; right: 20px;
+    background: var(--surface2);
+    border: 1px solid var(--accent);
+    color: var(--text);
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    transform: translateY(60px);
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 999;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* LOADING */
+  .skeleton { animation: pulse 1.4s infinite; background: var(--surface2); border-radius: 6px; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+</style>
 </head>
 <body>
 
-<!-- ========== NAV ========== -->
 <nav>
   <div class="nav-brand">
     <span>SP</span>
     Student Performance
   </div>
   <div class="nav-actions">
-    <button class="btn btn-ghost" onclick="openModal('csv-modal')">⬆ Import CSV</button>
     <button class="btn btn-ghost" onclick="exportCSV()">⬇ Export</button>
-    <button class="btn btn-accent2" onclick="openModal('add-modal')">+ Add Student</button>
     <button class="btn btn-primary" onclick="seedData()">⟳ Seed Data</button>
   </div>
 </nav>
 
-<!-- ========== HERO ========== -->
 <div class="hero">
   <div class="hero-tag">📊 Analytics Dashboard</div>
   <h1>Track performance<br><em>at a glance</em></h1>
-  <p>Add your own student data, import a CSV, or seed sample data — then filter, explore, and export.</p>
+  <p>Filter classes, spot trends, and identify students who need support — all in one clean view.</p>
   <div class="hero-actions">
     <button class="btn btn-primary" onclick="document.getElementById('filters-section').scrollIntoView({behavior:'smooth'})">Explore Dashboard</button>
-    <button class="btn btn-accent2" onclick="openModal('add-modal')">+ Add a Student</button>
     <button class="btn btn-ghost" onclick="seedData()">Generate Sample Data</button>
   </div>
 </div>
 
-<!-- ========== MAIN ========== -->
 <div class="container">
 
   <!-- KPIs -->
-  <div class="kpis">
+  <div class="kpis" id="kpi-strip">
     <div class="kpi-card">
       <div class="kpi-label">Total Students</div>
       <div class="kpi-value accent" id="kpi-total">0</div>
@@ -59,7 +420,7 @@
     <div class="kpi-card">
       <div class="kpi-label">At-Risk</div>
       <div class="kpi-value danger" id="kpi-risk">0</div>
-      <div class="kpi-sub">marks &lt; 40%</div>
+      <div class="kpi-sub">need support</div>
     </div>
   </div>
 
@@ -67,12 +428,15 @@
   <div id="filters-section">
     <div class="section-head">
       <h2>Filter Data</h2>
-      <p>Narrow down by class, band, or attendance threshold.</p>
+      <p>Narrow down by class, performance band, or attendance threshold.</p>
     </div>
     <div class="filters">
       <div class="filter-group">
         <label>Class</label>
-        <select id="f-class"><option value="all">All Classes</option></select>
+        <select id="f-class">
+          <option value="all">All Classes</option>
+          <option>Class A</option><option>Class B</option><option>Class C</option><option>Class D</option>
+        </select>
       </div>
       <div class="filter-group">
         <label>Band</label>
@@ -83,8 +447,7 @@
       </div>
       <div class="filter-group">
         <label>Min Attendance (<span id="att-val">0</span>%)</label>
-        <input type="range" id="f-attend" min="0" max="100" value="0"
-          oninput="document.getElementById('att-val').textContent=this.value"/>
+        <input type="range" id="f-attend" min="0" max="100" value="0" oninput="document.getElementById('att-val').textContent=this.value"/>
       </div>
       <div class="filter-group">
         <label>Sort By</label>
@@ -105,7 +468,7 @@
   <!-- CHARTS -->
   <div class="section-head">
     <h2>Charts</h2>
-    <p>Visual breakdown of performance, attendance correlation, and band distribution.</p>
+    <p>Visual breakdown of class performance, attendance correlation, and band distribution.</p>
   </div>
   <div class="charts-grid">
     <div class="chart-card">
@@ -123,8 +486,11 @@
   </div>
 
   <!-- INSIGHTS -->
-  <div class="section-head"><h2>Insights</h2><p>Auto-generated observations from the current dataset.</p></div>
-  <div class="insights-grid">
+  <div class="section-head">
+    <h2>Insights</h2>
+    <p>Auto-generated observations from the current dataset.</p>
+  </div>
+  <div class="insights-grid" id="insights-grid">
     <div class="insight-card">
       <div class="insight-icon" style="background:rgba(110,231,183,0.1)">🏆</div>
       <div><h4>Top Class</h4><p id="ins-top">—</p></div>
@@ -144,23 +510,25 @@
   </div>
 
   <!-- TABLE -->
-  <div class="section-head"><h2>Student Records</h2><p>Full roster — click a row to edit or delete.</p></div>
+  <div class="section-head">
+    <h2>Student Records</h2>
+    <p>Full roster with marks, attendance, and study data.</p>
+  </div>
   <div class="table-wrap">
     <div class="table-search">
       <input type="text" id="search-input" placeholder="Search by name or ID…" oninput="applyFilters()"/>
       <span id="table-count" style="color:var(--muted);font-size:0.8rem;white-space:nowrap"></span>
-      <button class="btn btn-ghost" style="font-size:0.78rem" onclick="clearAllData()">🗑 Clear All</button>
     </div>
     <div class="table-scroll">
       <table>
         <thead>
           <tr>
             <th>ID</th><th>Name</th><th>Class</th>
-            <th>Marks</th><th>Attendance</th><th>Study Hrs</th><th>Band</th><th>Actions</th>
+            <th>Marks</th><th>Attendance</th><th>Study Hrs</th><th>Band</th>
           </tr>
         </thead>
         <tbody id="table-body">
-          <tr><td colspan="8" class="empty-state">No data — click <strong>+ Add Student</strong>, <strong>Import CSV</strong>, or <strong>Seed Data</strong></td></tr>
+          <tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--muted)">No data — click "Seed Data" or "Generate Sample Data"</td></tr>
         </tbody>
       </table>
     </div>
@@ -170,104 +538,288 @@
     </div>
   </div>
 
-</div><!-- /container -->
-
-
-<!-- ========== ADD STUDENT MODAL ========== -->
-<div class="modal-overlay" id="add-modal" onclick="closeModalOutside(event,'add-modal')">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 id="modal-title">Add New Student</h3>
-      <button class="modal-close" onclick="closeModal('add-modal')">✕</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="edit-id"/>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Full Name <span class="req">*</span></label>
-          <input type="text" id="inp-name" placeholder="e.g. Priya Sharma" maxlength="50"/>
-          <span class="field-error" id="err-name"></span>
-        </div>
-        <div class="form-group">
-          <label>Class <span class="req">*</span></label>
-          <input type="text" id="inp-class" placeholder="e.g. Class A" maxlength="20" list="class-suggestions"/>
-          <datalist id="class-suggestions"></datalist>
-          <span class="field-error" id="err-class"></span>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Marks (0–100) <span class="req">*</span></label>
-          <input type="number" id="inp-marks" placeholder="e.g. 78" min="0" max="100"/>
-          <span class="field-error" id="err-marks"></span>
-        </div>
-        <div class="form-group">
-          <label>Attendance % (0–100) <span class="req">*</span></label>
-          <input type="number" id="inp-attend" placeholder="e.g. 85" min="0" max="100"/>
-          <span class="field-error" id="err-attend"></span>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Study Hours / week (1–20)</label>
-          <input type="number" id="inp-hours" placeholder="e.g. 6" min="1" max="20"/>
-        </div>
-        <div class="form-group">
-          <label>Band (auto-assigned)</label>
-          <div class="band-preview" id="band-preview">—</div>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('add-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="submitStudent()">Save Student</button>
-    </div>
-  </div>
 </div>
 
-<!-- ========== CSV IMPORT MODAL ========== -->
-<div class="modal-overlay" id="csv-modal" onclick="closeModalOutside(event,'csv-modal')">
-  <div class="modal">
-    <div class="modal-header">
-      <h3>Import CSV</h3>
-      <button class="modal-close" onclick="closeModal('csv-modal')">✕</button>
-    </div>
-    <div class="modal-body">
-      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem">
-        Upload a CSV file. Expected columns (in any order):<br>
-        <code>name, class, marks, attendance, study_hours</code><br>
-        <em>ID and Band are auto-generated.</em>
-      </p>
-      <div class="drop-zone" id="drop-zone"
-        ondragover="event.preventDefault();this.classList.add('drag-over')"
-        ondragleave="this.classList.remove('drag-over')"
-        ondrop="handleDrop(event)">
-        <div class="drop-icon">📂</div>
-        <p>Drag &amp; drop CSV here</p>
-        <p style="color:var(--muted);font-size:0.8rem">or</p>
-        <label class="btn btn-ghost" style="cursor:pointer">
-          Browse File
-          <input type="file" id="csv-file-input" accept=".csv" style="display:none" onchange="handleFileSelect(event)"/>
-        </label>
-      </div>
-      <div id="csv-preview"></div>
-      <div class="form-group" style="margin-top:1rem">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem">
-          <input type="checkbox" id="csv-append" checked style="accent-color:var(--accent2)"/>
-          Append to existing data (uncheck to replace)
-        </label>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('csv-modal')">Cancel</button>
-      <button class="btn btn-primary" id="csv-import-btn" onclick="importCSV()" disabled>Import</button>
-    </div>
-  </div>
-</div>
-
-<!-- ========== TOAST ========== -->
 <div class="toast" id="toast"></div>
 
-<script src="script.js"></script>
+<script>
+// ---- DATA GENERATION ----
+const NAMES = ["Aarav","Aisha","Arjun","Bhavna","Chirag","Deepika","Dev","Fatima","Gaurav","Hina","Ishan","Jyoti","Karan","Lakshmi","Manav","Neha","Omkar","Pooja","Rahul","Riya","Sahil","Sanya","Tanvi","Uday","Varun","Vidya","Yash","Zara","Rohan","Priya","Amit","Simran","Kunal","Meera","Nikhil","Anjali","Rohit","Kavya","Sumit","Divya","Aditya","Nisha","Vivek","Sneha","Kartik","Ananya","Siddharth","Rekha","Akash","Swati"];
+
+function getBand(marks) {
+  if (marks >= 75) return "Distinction";
+  if (marks >= 60) return "Merit";
+  if (marks >= 40) return "Pass";
+  return "At-Risk";
+}
+
+function rand(min, max) { return Math.round(Math.random() * (max - min) + min); }
+
+function seedData() {
+  allStudents = [];
+  const classes = ["Class A","Class B","Class C","Class D"];
+  // Each class has a slightly different performance profile
+  const classProfiles = { "Class A":{marksMu:72,sd:14}, "Class B":{marksMu:65,sd:16}, "Class C":{marksMu:58,sd:15}, "Class D":{marksMu:55,sd:18} };
+
+  let id = 1001;
+  classes.forEach(cls => {
+    const profile = classProfiles[cls];
+    for (let i = 0; i < rand(10,15); i++) {
+      let marks = Math.min(100, Math.max(0, Math.round(profile.marksMu + (Math.random()-0.5)*2*profile.sd)));
+      // attendance loosely correlated with marks
+      let attend = Math.min(100, Math.max(50, marks + rand(-15, 20)));
+      let hours = Math.min(12, Math.max(1, Math.round((marks/100)*9 + (Math.random()-0.5)*4)));
+      allStudents.push({
+        id: "S" + id++,
+        name: NAMES[Math.floor(Math.random()*NAMES.length)] + " " + String.fromCharCode(65+Math.floor(Math.random()*26)) + ".",
+        cls,
+        marks,
+        attend,
+        hours,
+        band: getBand(marks)
+      });
+    }
+  });
+
+  filteredStudents = [...allStudents];
+  currentPage = 1;
+  updateAll();
+  showToast("✓ " + allStudents.length + " students loaded");
+}
+
+// ---- STATE ----
+let allStudents = [];
+let filteredStudents = [];
+let currentPage = 1;
+const PAGE_SIZE = 10;
+let marksChart, bandsChart, scatterChart;
+
+// ---- FILTERS ----
+function applyFilters() {
+  const cls = document.getElementById("f-class").value;
+  const band = document.getElementById("f-band").value;
+  const minAttend = +document.getElementById("f-attend").value;
+  const sort = document.getElementById("f-sort").value;
+  const search = document.getElementById("search-input").value.toLowerCase();
+
+  filteredStudents = allStudents.filter(s => {
+    if (cls !== "all" && s.cls !== cls) return false;
+    if (band !== "all" && s.band !== band) return false;
+    if (s.attend < minAttend) return false;
+    if (search && !s.name.toLowerCase().includes(search) && !s.id.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  filteredStudents.sort((a,b) => {
+    if (sort === "marks") return b.marks - a.marks;
+    if (sort === "attend") return b.attend - a.attend;
+    if (sort === "hours") return b.hours - a.hours;
+    if (sort === "name") return a.name.localeCompare(b.name);
+    return 0;
+  });
+
+  currentPage = 1;
+  updateAll();
+}
+
+function resetFilters() {
+  document.getElementById("f-class").value = "all";
+  document.getElementById("f-band").value = "all";
+  document.getElementById("f-attend").value = 0;
+  document.getElementById("att-val").textContent = "0";
+  document.getElementById("f-sort").value = "marks";
+  document.getElementById("search-input").value = "";
+  filteredStudents = [...allStudents];
+  currentPage = 1;
+  updateAll();
+}
+
+// ---- UPDATE ALL ----
+function updateAll() {
+  updateKPIs();
+  updateCharts();
+  updateTable();
+  updateInsights();
+}
+
+// ---- KPIs ----
+function updateKPIs() {
+  const s = filteredStudents;
+  document.getElementById("kpi-total").textContent = s.length;
+  if (!s.length) {
+    ["kpi-marks","kpi-attend","kpi-risk"].forEach(id => document.getElementById(id).textContent = "—");
+    return;
+  }
+  const avgMarks = s.reduce((a,b) => a+b.marks, 0) / s.length;
+  const avgAttend = s.reduce((a,b) => a+b.attend, 0) / s.length;
+  const atRisk = s.filter(x => x.band === "At-Risk").length;
+  document.getElementById("kpi-marks").textContent = avgMarks.toFixed(1) + "%";
+  document.getElementById("kpi-attend").textContent = avgAttend.toFixed(1) + "%";
+  document.getElementById("kpi-risk").textContent = atRisk;
+}
+
+// ---- CHARTS ----
+const CHART_DEFAULTS = {
+  color: "#e2e8f0",
+  font: { family: "'DM Sans', sans-serif", size: 11 }
+};
+
+function initCharts() {
+  Chart.defaults.color = CHART_DEFAULTS.color;
+  Chart.defaults.font = CHART_DEFAULTS.font;
+
+  marksChart = new Chart(document.getElementById("chart-marks"), {
+    type: "bar",
+    data: { labels: [], datasets: [{ label: "Avg Marks", data: [], backgroundColor: ["#6ee7b7","#818cf8","#fb923c","#f87171"], borderRadius: 6, borderSkipped: false }] },
+    options: { plugins: { legend: { display: false } }, scales: { x: { grid: { color: "#2a2f3e" } }, y: { grid: { color: "#2a2f3e" }, min: 0, max: 100 } }, animation: { duration: 500 } }
+  });
+
+  bandsChart = new Chart(document.getElementById("chart-bands"), {
+    type: "doughnut",
+    data: { labels: ["Distinction","Merit","Pass","At-Risk"], datasets: [{ data: [0,0,0,0], backgroundColor: ["#6ee7b7","#818cf8","#fb923c","#f87171"], borderWidth: 0 }] },
+    options: { plugins: { legend: { position: "bottom", labels: { boxWidth: 10, padding: 14 } } }, cutout: "65%", animation: { duration: 500 } }
+  });
+
+  scatterChart = new Chart(document.getElementById("chart-scatter"), {
+    type: "scatter",
+    data: { datasets: [{ label: "Students", data: [], backgroundColor: "rgba(129,140,248,0.65)", pointRadius: 5, pointHoverRadius: 7 }] },
+    options: {
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `Attend: ${ctx.parsed.x}% | Marks: ${ctx.parsed.y}%` } } },
+      scales: {
+        x: { grid: { color: "#2a2f3e" }, title: { display: true, text: "Attendance (%)" }, min: 0, max: 100 },
+        y: { grid: { color: "#2a2f3e" }, title: { display: true, text: "Marks (%)" }, min: 0, max: 100 }
+      },
+      animation: { duration: 400 }
+    }
+  });
+}
+
+function updateCharts() {
+  const s = filteredStudents;
+  if (!s.length) return;
+
+  // Marks by class
+  const classes = ["Class A","Class B","Class C","Class D"];
+  const classMarks = classes.map(cls => {
+    const students = s.filter(x => x.cls === cls);
+    return students.length ? +(students.reduce((a,b) => a+b.marks,0)/students.length).toFixed(1) : null;
+  });
+  marksChart.data.labels = classes;
+  marksChart.data.datasets[0].data = classMarks;
+  marksChart.update();
+
+  // Bands
+  const bands = ["Distinction","Merit","Pass","At-Risk"];
+  bandsChart.data.datasets[0].data = bands.map(b => s.filter(x => x.band === b).length);
+  bandsChart.update();
+
+  // Scatter
+  scatterChart.data.datasets[0].data = s.map(x => ({ x: x.attend, y: x.marks }));
+  scatterChart.update();
+}
+
+// ---- TABLE ----
+function updateTable() {
+  const s = filteredStudents;
+  const total = s.length;
+  const pages = Math.ceil(total / PAGE_SIZE) || 1;
+  currentPage = Math.min(currentPage, pages);
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const slice = s.slice(start, start + PAGE_SIZE);
+
+  document.getElementById("table-count").textContent = total + " records";
+
+  const tbody = document.getElementById("table-body");
+  if (!slice.length) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--muted)">No students match the current filters.</td></tr>`;
+  } else {
+    tbody.innerHTML = slice.map(st => `
+      <tr>
+        <td style="color:var(--muted);font-size:0.78rem">${st.id}</td>
+        <td style="font-weight:500">${st.name}</td>
+        <td>${st.cls}</td>
+        <td>
+          ${st.marks}%
+          <div class="progress-bar-wrap"><div class="progress-bar" style="width:${st.marks}%;background:${markColor(st.marks)}"></div></div>
+        </td>
+        <td>${st.attend}%</td>
+        <td>${st.hours}h</td>
+        <td><span class="band-badge band-${st.band.replace(' ','-')}">${st.band}</span></td>
+      </tr>`).join("");
+  }
+
+  // Pagination
+  document.getElementById("page-info").textContent = `Page ${currentPage} of ${pages}`;
+  const btns = document.getElementById("page-btns");
+  btns.innerHTML = `
+    <button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?"disabled":""}>‹</button>
+    ${Array.from({length:pages},(_,i)=>`<button class="page-btn ${i+1===currentPage?"active":""}" onclick="goPage(${i+1})">${i+1}</button>`).join("")}
+    <button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===pages?"disabled":""}>›</button>
+  `;
+}
+
+function goPage(p) { currentPage = p; updateTable(); }
+function markColor(m) { return m>=75?"#6ee7b7":m>=60?"#818cf8":m>=40?"#fb923c":"#f87171"; }
+
+// ---- INSIGHTS ----
+function updateInsights() {
+  const s = filteredStudents;
+  if (!s.length) return;
+
+  // Top class
+  const classes = ["Class A","Class B","Class C","Class D"];
+  let best = null, bestAvg = -1;
+  classes.forEach(cls => {
+    const sts = s.filter(x => x.cls === cls);
+    if (!sts.length) return;
+    const avg = sts.reduce((a,b) => a+b.marks,0)/sts.length;
+    if (avg > bestAvg) { bestAvg = avg; best = cls; }
+  });
+  document.getElementById("ins-top").textContent = best ? `${best} leads with ${bestAvg.toFixed(1)}% average marks` : "—";
+
+  // At-risk rate
+  const riskPct = (s.filter(x=>x.band==="At-Risk").length/s.length*100).toFixed(0);
+  document.getElementById("ins-risk").textContent = `${riskPct}% of students (marks < 40%) need academic support`;
+
+  // Correlation
+  const highAttend = s.filter(x => x.attend >= 80);
+  const lowAttend = s.filter(x => x.attend < 80);
+  if (highAttend.length && lowAttend.length) {
+    const hi = (highAttend.reduce((a,b)=>a+b.marks,0)/highAttend.length).toFixed(1);
+    const lo = (lowAttend.reduce((a,b)=>a+b.marks,0)/lowAttend.length).toFixed(1);
+    document.getElementById("ins-corr").textContent = `High-attendance students avg ${hi}% vs ${lo}% for lower attendance`;
+  }
+
+  // Study hours
+  const avgHours = (s.reduce((a,b)=>a+b.hours,0)/s.length).toFixed(1);
+  const distinction = s.filter(x=>x.band==="Distinction");
+  const distHours = distinction.length ? (distinction.reduce((a,b)=>a+b.hours,0)/distinction.length).toFixed(1) : null;
+  document.getElementById("ins-hours").textContent = distHours
+    ? `Average ${avgHours}h/week; Distinction students study ${distHours}h`
+    : `Average study time: ${avgHours} hours per week`;
+}
+
+// ---- EXPORT ----
+function exportCSV() {
+  if (!filteredStudents.length) { showToast("No data to export"); return; }
+  const header = "ID,Name,Class,Marks,Attendance,Study Hours,Band\n";
+  const rows = filteredStudents.map(s => `${s.id},${s.name},${s.cls},${s.marks},${s.attend},${s.hours},${s.band}`).join("\n");
+  const blob = new Blob([header+rows], {type:"text/csv"});
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = "student_performance.csv"; a.click();
+  showToast("✓ CSV exported");
+}
+
+// ---- TOAST ----
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2800);
+}
+
+// ---- INIT ----
+initCharts();
+seedData();
+</script>
 </body>
 </html>
