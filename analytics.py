@@ -2,9 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 import json
-import csv
-import math
-from statistics import mean
 import pandas as pd
 
 OUTPUT_DIR = Path("output")
@@ -50,15 +47,12 @@ def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
         "band": "band",
         "Band": "band",
     }
-    cols = {c: rename_map.get(c, c) for c in df.columns}
-    df = df.rename(columns=cols)
-    return df
+    return df.rename(columns={c: rename_map.get(c, c) for c in df.columns})
 
 def clean_students(df: pd.DataFrame) -> pd.DataFrame:
     df = normalize_columns(df.copy())
 
-    required = ["name", "className", "marks", "attendance"]
-    for col in required:
+    for col in ["name", "className", "marks", "attendance"]:
         if col not in df.columns:
             df[col] = ""
 
@@ -74,6 +68,8 @@ def clean_students(df: pd.DataFrame) -> pd.DataFrame:
     df["attendance"] = df["attendance"].apply(safe_float).clip(0, 100)
     df["studyHours"] = df["studyHours"].apply(safe_float).clip(0, 20)
 
+    if "band" not in df.columns:
+        df["band"] = ""
     df["band"] = df["band"].astype(str).str.strip()
     df.loc[df["band"].isin(["", "nan", "None"]), "band"] = df["marks"].apply(calc_band)
 
@@ -86,9 +82,7 @@ def clean_students(df: pd.DataFrame) -> pd.DataFrame:
 def correlation(x, y):
     if len(x) < 2 or len(y) < 2:
         return 0.0
-    sx = pd.Series(x, dtype="float64")
-    sy = pd.Series(y, dtype="float64")
-    value = sx.corr(sy)
+    value = pd.Series(x, dtype="float64").corr(pd.Series(y, dtype="float64"))
     return round(float(value), 2) if pd.notna(value) else 0.0
 
 def build_summary(df: pd.DataFrame) -> dict:
@@ -131,7 +125,7 @@ def build_summary(df: pd.DataFrame) -> dict:
             "band": s["band"],
         }
 
-    summary = {
+    return {
         "meta": {
             "students": int(len(df)),
             "classes": int(df["className"].nunique()),
@@ -153,7 +147,6 @@ def build_summary(df: pd.DataFrame) -> dict:
         "topStudent": top_student,
         "riskStudents": risk_df.to_dict(orient="records"),
     }
-    return summary
 
 def export_summary_csv(summary: dict):
     rows = []
@@ -182,18 +175,16 @@ def export_summary_csv(summary: dict):
 def load_input() -> pd.DataFrame:
     path = Path(SOURCE_FILE)
     if not path.exists():
-        sample = pd.DataFrame([
+        return pd.DataFrame([
             {"id":"ST001","name":"Aarav","className":"BCA 1","marks":86,"attendance":92,"studyHours":4.1},
             {"id":"ST002","name":"Diya","className":"BCA 1","marks":78,"attendance":88,"studyHours":3.4},
             {"id":"ST003","name":"Kunal","className":"BCA 2","marks":64,"attendance":74,"studyHours":2.7},
             {"id":"ST004","name":"Ananya","className":"B.Tech CSE","marks":91,"attendance":95,"studyHours":4.5},
         ])
-        return sample
     return pd.read_csv(path)
 
 def main():
-    df = load_input()
-    df = clean_students(df)
+    df = clean_students(load_input())
     summary = build_summary(df)
 
     with open(JSON_OUT, "w", encoding="utf-8") as f:
