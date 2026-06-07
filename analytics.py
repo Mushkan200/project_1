@@ -1,316 +1,207 @@
-import sqlite3
+from __future__ import annotations
+
+from pathlib import Path
 import json
 import csv
-import io
-import os
-from datetime import datetime
-from flask import Flask, jsonify, request, Response, abort
-from flask_cors import CORS
+import math
+from statistics import mean
+import pandas as pd
 
-# ── CONFIG ────────────────────────────────────────────────────────────────────
-app = Flask(__name__)
-CORS(app)                            # allow requests from the frontend origin
-DB_PATH = "students.db"             # SQLite file; created automatically
-PORT    = 5000
-DEBUG   = True
+OUTPUT_DIR = Path("output")
+OUTPUT_DIR.mkdir(exist_ok=True)
 
-# ── DATABASE SETUP ────────────────────────────────────────────────────────────
+SOURCE_FILE = "students.csv"
+JSON_OUT = OUTPUT_DIR / "student_data.json"
+CSV_OUT = OUTPUT_DIR / "student_summary.csv"
 
-def get_db():
-    """Return a thread-local SQLite connection with row_factory."""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-def init_db():
-    """Create the students table if it doesn't exist."""
-    with get_db() as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS students (
-                id          TEXT PRIMARY KEY,
-                name        TEXT NOT NULL,
-                cls         TEXT NOT NULL,
-                marks       INTEGER NOT NULL CHECK(marks >= 0 AND marks <= 100),
-                attend      INTEGER NOT NULL CHECK(attend >= 0 AND attend <= 100),
-                hours       INTEGER NOT NULL DEFAULT 5,
-                band        TEXT NOT NULL,
-                created_at  TEXT DEFAULT (datetime('now'))
-            )
-        """)
-        conn.commit()
-
-# ── HELPERS ───────────────────────────────────────────────────────────────────
-
-def get_band(marks: int) -> str:
-    if marks >= 75: return "Distinction"
-    if marks >= 60: return "Merit"
-    if marks >= 40: return "Pass"
+def calc_band(marks: float) -> str:
+    if marks >= 85:
+        return "Distinction"
+    if marks >= 70:
+        return "Merit"
+    if marks >= 40:
+        return "Pass"
     return "At-Risk"
 
-
-def row_to_dict(row) -> dict:
-    return dict(row)
-
-
-def validate_student(data: dict) -> list[str]:
-    """Return a list of validation error messages (empty = valid)."""
-    errors = []
-    if not data.get("name") or len(str(data["name"]).strip()) < 2:
-        errors.append("'name' is required (min 2 chars)")
-    if not data.get("cls") or len(str(data["cls"]).strip()) < 1:
-        errors.append("'cls' (class) is required")
+def safe_float(value, default=0.0):
     try:
-        m = int(data["marks"])
-        if not (0 <= m <= 100):
-            errors.append("'marks' must be 0–100")
-    except (KeyError, ValueError, TypeError):
-        errors.append("'marks' must be an integer 0–100")
-    try:
-        a = int(data["attend"])
-        if not (0 <= a <= 100):
-            errors.append("'attend' must be 0–100")
-    except (KeyError, ValueError, TypeError):
-        errors.append("'attend' must be an integer 0–100")
-    return errors
+        if value is None or (isinstance(value, str) and not value.strip()):
+            return default
+        return float(value)
+    except Exception:
+        return default
 
-
-# ── ROUTES ────────────────────────────────────────────────────────────────────
-
-@app.route("/health")
-def health():
-    return jsonify({"status": "ok", "db": DB_PATH, "timestamp": datetime.utcnow().isoformat()})
-
-
-# ── GET all students ──────────────────────────────────────────────────────────
-@app.route("/students", methods=["GET"])
-def get_students():
-    """
-    Query params:
-        class       filter by class name
-        band        filter by band
-        min_attend  minimum attendance %
-        sort        marks|attend|hours|name (default: marks desc)
-        search      name/id substring search
-    """
-    cls        = request.args.get("class")
-    band       = request.args.get("band")
-    min_attend = request.args.get("min_attend", 0, type=int)
-    sort       = request.args.get("sort", "marks")
-    search     = request.args.get("search", "").lower()
-
-    sort_map = {
-        "marks":  "marks DESC",
-        "attend": "attend DESC",
-        "hours":  "hours DESC",
-        "name":   "name ASC",
+def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
+    rename_map = {
+        "ID": "id",
+        "Student ID": "id",
+        "Name": "name",
+        "Full Name": "name",
+        "Class": "className",
+        "Class Name": "className",
+        "marks": "marks",
+        "Marks": "marks",
+        "attendance": "attendance",
+        "Attendance": "attendance",
+        "study_hours": "studyHours",
+        "study hrs": "studyHours",
+        "Study Hrs": "studyHours",
+        "Study Hours": "studyHours",
+        "band": "band",
+        "Band": "band",
     }
-    order = sort_map.get(sort, "marks DESC")
+    cols = {c: rename_map.get(c, c) for c in df.columns}
+    df = df.rename(columns=cols)
+    return df
 
-    query = "SELECT * FROM students WHERE attend >= ?"
-    params = [min_attend]
+def clean_students(df: pd.DataFrame) -> pd.DataFrame:
+    df = normalize_columns(df.copy())
 
-    if cls:
-        query  += " AND cls = ?"
-        params.append(cls)
-    if band:
-        query  += " AND band = ?"
-        params.append(band)
-    if search:
-        query  += " AND (LOWER(name) LIKE ? OR LOWER(id) LIKE ?)"
-        params += [f"%{search}%", f"%{search}%"]
+    required = ["name", "className", "marks", "attendance"]
+    for col in required:
+        if col not in df.columns:
+            df[col] = ""
 
-    query += f" ORDER BY {order}"
+    if "studyHours" not in df.columns:
+        df["studyHours"] = 0
 
-    with get_db() as conn:
-        rows = conn.execute(query, params).fetchall()
+    if "id" not in df.columns:
+        df["id"] = [f"ST{str(i+1).zfill(3)}" for i in range(len(df))]
 
-    return jsonify([row_to_dict(r) for r in rows])
+    df["name"] = df["name"].astype(str).str.strip()
+    df["className"] = df["className"].astype(str).str.strip()
+    df["marks"] = df["marks"].apply(safe_float).clip(0, 100)
+    df["attendance"] = df["attendance"].apply(safe_float).clip(0, 100)
+    df["studyHours"] = df["studyHours"].apply(safe_float).clip(0, 20)
 
+    df["band"] = df["band"].astype(str).str.strip()
+    df.loc[df["band"].isin(["", "nan", "None"]), "band"] = df["marks"].apply(calc_band)
 
-# ── POST one student ──────────────────────────────────────────────────────────
-@app.route("/students", methods=["POST"])
-def add_student():
-    data   = request.get_json(silent=True) or {}
-    errors = validate_student(data)
-    if errors:
-        return jsonify({"error": "Validation failed", "details": errors}), 400
+    df = df[df["name"].ne("") & df["className"].ne("")].copy()
+    df["id"] = df["id"].astype(str).str.strip()
+    df.loc[df["id"].isin(["", "nan", "None"]), "id"] = [f"ST{str(i+1).zfill(3)}" for i in range(len(df))]
 
-    marks  = int(data["marks"])
-    attend = int(data["attend"])
-    hours  = max(1, min(20, int(data.get("hours", 5))))
-    band   = get_band(marks)
+    return df.reset_index(drop=True)
 
-    # Auto-generate ID
-    with get_db() as conn:
-        row = conn.execute("SELECT COUNT(*) AS cnt FROM students").fetchone()
-        new_id = f"S{1001 + row['cnt']}"
-        conn.execute(
-            "INSERT INTO students (id, name, cls, marks, attend, hours, band) VALUES (?,?,?,?,?,?,?)",
-            (new_id, data["name"].strip(), data["cls"].strip(), marks, attend, hours, band)
-        )
-        conn.commit()
-        student = row_to_dict(conn.execute("SELECT * FROM students WHERE id=?", (new_id,)).fetchone())
+def correlation(x, y):
+    if len(x) < 2 or len(y) < 2:
+        return 0.0
+    sx = pd.Series(x, dtype="float64")
+    sy = pd.Series(y, dtype="float64")
+    value = sx.corr(sy)
+    return round(float(value), 2) if pd.notna(value) else 0.0
 
-    return jsonify(student), 201
-
-
-# ── POST bulk (replace all) ───────────────────────────────────────────────────
-@app.route("/students/bulk", methods=["POST"])
-def bulk_replace():
-    """
-    Replace all students with a provided list.
-    Accepts: [ { name, cls, marks, attend, hours } ] or
-             [ { id, name, cls, marks, attend, hours, band } ]
-    """
-    data = request.get_json(silent=True)
-    if not isinstance(data, list):
-        return jsonify({"error": "Expected a JSON array of students"}), 400
-
-    rows   = []
-    errors = []
-    for i, item in enumerate(data):
-        errs = validate_student(item)
-        if errs:
-            errors.append({"row": i, "errors": errs})
-            continue
-        marks  = int(item["marks"])
-        attend = int(item["attend"])
-        hours  = max(1, min(20, int(item.get("hours", 5))))
-        rows.append((
-            item.get("id") or f"S{1001 + i}",
-            str(item["name"]).strip(),
-            str(item["cls"]).strip(),
-            marks, attend, hours,
-            get_band(marks)
-        ))
-
-    with get_db() as conn:
-        conn.execute("DELETE FROM students")
-        conn.executemany(
-            "INSERT OR REPLACE INTO students (id, name, cls, marks, attend, hours, band) VALUES (?,?,?,?,?,?,?)",
-            rows
-        )
-        conn.commit()
-
-    response = {"imported": len(rows), "skipped": len(errors)}
-    if errors:
-        response["validation_errors"] = errors
-    return jsonify(response), 200
-
-
-# ── PUT update one student ────────────────────────────────────────────────────
-@app.route("/students/<student_id>", methods=["PUT"])
-def update_student(student_id):
-    with get_db() as conn:
-        existing = conn.execute("SELECT * FROM students WHERE id=?", (student_id,)).fetchone()
-    if not existing:
-        abort(404, description=f"Student {student_id} not found")
-
-    data   = request.get_json(silent=True) or {}
-    errors = validate_student(data)
-    if errors:
-        return jsonify({"error": "Validation failed", "details": errors}), 400
-
-    marks  = int(data["marks"])
-    attend = int(data["attend"])
-    hours  = max(1, min(20, int(data.get("hours", 5))))
-    band   = get_band(marks)
-
-    with get_db() as conn:
-        conn.execute(
-            "UPDATE students SET name=?, cls=?, marks=?, attend=?, hours=?, band=? WHERE id=?",
-            (data["name"].strip(), data["cls"].strip(), marks, attend, hours, band, student_id)
-        )
-        conn.commit()
-        student = row_to_dict(conn.execute("SELECT * FROM students WHERE id=?", (student_id,)).fetchone())
-
-    return jsonify(student)
-
-
-# ── DELETE one student ────────────────────────────────────────────────────────
-@app.route("/students/<student_id>", methods=["DELETE"])
-def delete_student(student_id):
-    with get_db() as conn:
-        result = conn.execute("DELETE FROM students WHERE id=?", (student_id,))
-        conn.commit()
-    if result.rowcount == 0:
-        abort(404, description=f"Student {student_id} not found")
-    return jsonify({"deleted": student_id})
-
-
-# ── GET CSV export ────────────────────────────────────────────────────────────
-@app.route("/students/export", methods=["GET"])
-def export_csv():
-    """Download all students as a CSV file."""
-    with get_db() as conn:
-        rows = conn.execute("SELECT id, name, cls, marks, attend, hours, band FROM students ORDER BY cls, marks DESC").fetchall()
-
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["ID", "Name", "Class", "Marks", "Attendance", "Study Hours", "Band"])
-    for row in rows:
-        writer.writerow([row["id"], row["name"], row["cls"], row["marks"], row["attend"], row["hours"], row["band"]])
-
-    return Response(
-        output.getvalue(),
-        mimetype="text/csv",
-        headers={"Content-Disposition": "attachment; filename=student_performance.csv"}
+def build_summary(df: pd.DataFrame) -> dict:
+    class_summary = (
+        df.groupby("className", as_index=False)
+          .agg(
+              students=("id", "count"),
+              avgMarks=("marks", "mean"),
+              avgAttendance=("attendance", "mean"),
+              avgStudyHours=("studyHours", "mean"),
+          )
+          .sort_values("avgMarks", ascending=False)
     )
 
+    band_order = ["Distinction", "Merit", "Pass", "At-Risk"]
+    band_counts = df["band"].value_counts().reindex(band_order, fill_value=0).reset_index()
+    band_counts.columns = ["band", "count"]
 
-# ── STATS endpoint ────────────────────────────────────────────────────────────
-@app.route("/students/stats", methods=["GET"])
-def get_stats():
-    """Return aggregated KPIs for the dashboard."""
-    with get_db() as conn:
-        total  = conn.execute("SELECT COUNT(*) AS n FROM students").fetchone()["n"]
-        if total == 0:
-            return jsonify({"total": 0, "avg_marks": None, "avg_attend": None, "at_risk": 0, "by_class": [], "by_band": []})
+    risk_df = df[df["marks"] < 40].copy()
 
-        agg    = conn.execute("SELECT AVG(marks) AS am, AVG(attend) AS aa FROM students").fetchone()
-        risk   = conn.execute("SELECT COUNT(*) AS n FROM students WHERE band='At-Risk'").fetchone()["n"]
+    top_class = None
+    if not class_summary.empty:
+        row = class_summary.iloc[0]
+        top_class = {
+            "className": row["className"],
+            "avgMarks": round(float(row["avgMarks"]), 1),
+            "students": int(row["students"]),
+        }
 
-        by_class = conn.execute(
-            "SELECT cls, AVG(marks) AS avg_marks, COUNT(*) AS count FROM students GROUP BY cls ORDER BY avg_marks DESC"
-        ).fetchall()
-        by_band  = conn.execute(
-            "SELECT band, COUNT(*) AS count FROM students GROUP BY band"
-        ).fetchall()
+    top_student = None
+    if not df.empty:
+        s = df.sort_values(["marks", "attendance"], ascending=[False, False]).iloc[0]
+        top_student = {
+            "id": s["id"],
+            "name": s["name"],
+            "className": s["className"],
+            "marks": float(s["marks"]),
+            "attendance": float(s["attendance"]),
+            "studyHours": float(s["studyHours"]),
+            "band": s["band"],
+        }
 
-    return jsonify({
-        "total":      total,
-        "avg_marks":  round(agg["am"], 1) if agg["am"] else None,
-        "avg_attend": round(agg["aa"], 1) if agg["aa"] else None,
-        "at_risk":    risk,
-        "by_class":   [dict(r) for r in by_class],
-        "by_band":    [dict(r) for r in by_band],
-    })
+    summary = {
+        "meta": {
+            "students": int(len(df)),
+            "classes": int(df["className"].nunique()),
+            "bands": band_order,
+            "avgMarks": round(float(df["marks"].mean()), 1) if len(df) else 0,
+            "avgAttendance": round(float(df["attendance"].mean()), 1) if len(df) else 0,
+            "avgStudyHours": round(float(df["studyHours"].mean()), 1) if len(df) else 0,
+            "riskCount": int(len(risk_df)),
+            "attendanceMarksCorrelation": correlation(df["attendance"], df["marks"]),
+        },
+        "students": df.to_dict(orient="records"),
+        "classSummary": class_summary.round({
+            "avgMarks": 1,
+            "avgAttendance": 1,
+            "avgStudyHours": 1,
+        }).to_dict(orient="records"),
+        "bandSummary": band_counts.to_dict(orient="records"),
+        "topClass": top_class,
+        "topStudent": top_student,
+        "riskStudents": risk_df.to_dict(orient="records"),
+    }
+    return summary
 
+def export_summary_csv(summary: dict):
+    rows = []
+    for item in summary["classSummary"]:
+        rows.append({
+            "type": "class",
+            "name": item["className"],
+            "students": item["students"],
+            "avgMarks": item["avgMarks"],
+            "avgAttendance": item["avgAttendance"],
+            "avgStudyHours": item["avgStudyHours"],
+            "band": "",
+        })
+    for item in summary["bandSummary"]:
+        rows.append({
+            "type": "band",
+            "name": item["band"],
+            "students": item["count"],
+            "avgMarks": "",
+            "avgAttendance": "",
+            "avgStudyHours": "",
+            "band": item["band"],
+        })
+    pd.DataFrame(rows).to_csv(CSV_OUT, index=False)
 
-@app.errorhandler(404)
-def not_found(e):
-    return jsonify({"error": str(e)}), 404
+def load_input() -> pd.DataFrame:
+    path = Path(SOURCE_FILE)
+    if not path.exists():
+        sample = pd.DataFrame([
+            {"id":"ST001","name":"Aarav","className":"BCA 1","marks":86,"attendance":92,"studyHours":4.1},
+            {"id":"ST002","name":"Diya","className":"BCA 1","marks":78,"attendance":88,"studyHours":3.4},
+            {"id":"ST003","name":"Kunal","className":"BCA 2","marks":64,"attendance":74,"studyHours":2.7},
+            {"id":"ST004","name":"Ananya","className":"B.Tech CSE","marks":91,"attendance":95,"studyHours":4.5},
+        ])
+        return sample
+    return pd.read_csv(path)
 
-@app.errorhandler(400)
-def bad_request(e):
-    return jsonify({"error": str(e)}), 400
+def main():
+    df = load_input()
+    df = clean_students(df)
+    summary = build_summary(df)
 
-@app.errorhandler(500)
-def server_error(e):
-    return jsonify({"error": "Internal server error"}), 500
+    with open(JSON_OUT, "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2, ensure_ascii=False)
+
+    export_summary_csv(summary)
+    print(f"Wrote {JSON_OUT}")
+    print(f"Wrote {CSV_OUT}")
 
 if __name__ == "__main__":
-    init_db()
-    print(f"\n🚀  Student Performance API running at http://localhost:{PORT}")
-    print(f"📂  Database: {os.path.abspath(DB_PATH)}")
-    print(f"📋  Endpoints:")
-    print(f"    GET    /students          — list all")
-    print(f"    POST   /students          — add one")
-    print(f"    POST   /students/bulk     — replace all")
-    print(f"    PUT    /students/<id>     — update")
-    print(f"    DELETE /students/<id>     — delete")
-    print(f"    GET    /students/export   — download CSV")
-    print(f"    GET    /students/stats    — aggregated KPIs")
-    print(f"    GET    /health            — health check\n")
-    app.run(host="0.0.0.0", port=PORT, debug=DEBUG)
+    main()
