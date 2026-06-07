@@ -1,127 +1,273 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="aurora">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Student Performance Insights Dashboard</title>
-  <meta name="description" content="A student performance dashboard with clear KPIs, filters, charts, and insights." />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css" />
-  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" defer></script>
-  <script src="script.js" defer></script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Student Performance Insights</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="style.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to content</a>
 
-  <div class="bg-orb orb-1"></div>
-  <div class="bg-orb orb-2"></div>
-  <div class="bg-orb orb-3"></div>
+<!-- ========== NAV ========== -->
+<nav>
+  <div class="nav-brand">
+    <span>SP</span>
+    Student Performance
+  </div>
+  <div class="nav-actions">
+    <button class="btn btn-ghost" onclick="openModal('csv-modal')">⬆ Import CSV</button>
+    <button class="btn btn-ghost" onclick="exportCSV()">⬇ Export</button>
+    <button class="btn btn-accent2" onclick="openModal('add-modal')">+ Add Student</button>
+    <button class="btn btn-primary" onclick="seedData()">⟳ Seed Data</button>
+  </div>
+</nav>
 
-  <header class="topbar">
-    <div class="topbar-accent"></div>
-    <div class="container topbar-inner">
-      <div class="brand">
-        <div class="brand-mark"><span>SP</span></div>
-        <div class="brand-copy">
-          <div class="brand-title">Student Performance Insights</div>
-          <div class="brand-subtitle">Dashboard</div>
-        </div>
+<!-- ========== HERO ========== -->
+<div class="hero">
+  <div class="hero-tag">📊 Analytics Dashboard</div>
+  <h1>Track performance<br><em>at a glance</em></h1>
+  <p>Add your own student data, import a CSV, or seed sample data — then filter, explore, and export.</p>
+  <div class="hero-actions">
+    <button class="btn btn-primary" onclick="document.getElementById('filters-section').scrollIntoView({behavior:'smooth'})">Explore Dashboard</button>
+    <button class="btn btn-accent2" onclick="openModal('add-modal')">+ Add a Student</button>
+    <button class="btn btn-ghost" onclick="seedData()">Generate Sample Data</button>
+  </div>
+</div>
+
+<!-- ========== MAIN ========== -->
+<div class="container">
+
+  <!-- KPIs -->
+  <div class="kpis">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Students</div>
+      <div class="kpi-value accent" id="kpi-total">0</div>
+      <div class="kpi-sub">in current view</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Avg Marks</div>
+      <div class="kpi-value accent2" id="kpi-marks">—</div>
+      <div class="kpi-sub">class average</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Avg Attendance</div>
+      <div class="kpi-value" id="kpi-attend">—</div>
+      <div class="kpi-sub">across cohort</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">At-Risk</div>
+      <div class="kpi-value danger" id="kpi-risk">0</div>
+      <div class="kpi-sub">marks &lt; 40%</div>
+    </div>
+  </div>
+
+  <!-- FILTERS -->
+  <div id="filters-section">
+    <div class="section-head">
+      <h2>Filter Data</h2>
+      <p>Narrow down by class, band, or attendance threshold.</p>
+    </div>
+    <div class="filters">
+      <div class="filter-group">
+        <label>Class</label>
+        <select id="f-class"><option value="all">All Classes</option></select>
       </div>
-
-      <div class="header-actions">
-        <button id="themeToggle" class="btn btn-primary">Change Theme</button>
-        <button id="exportCsv" class="btn btn-ghost">Export CSV</button>
+      <div class="filter-group">
+        <label>Band</label>
+        <select id="f-band">
+          <option value="all">All Bands</option>
+          <option>Distinction</option><option>Merit</option><option>Pass</option><option>At-Risk</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Min Attendance (<span id="att-val">0</span>%)</label>
+        <input type="range" id="f-attend" min="0" max="100" value="0"
+          oninput="document.getElementById('att-val').textContent=this.value"/>
+      </div>
+      <div class="filter-group">
+        <label>Sort By</label>
+        <select id="f-sort">
+          <option value="marks">Marks ↓</option>
+          <option value="attend">Attendance ↓</option>
+          <option value="hours">Study Hours ↓</option>
+          <option value="name">Name A–Z</option>
+        </select>
+      </div>
+      <div class="filter-actions">
+        <button class="btn btn-primary" onclick="applyFilters()">Apply</button>
+        <button class="btn btn-ghost" onclick="resetFilters()">Reset</button>
       </div>
     </div>
-  </header>
+  </div>
 
-  <main id="main" class="container page-grid">
-    <section class="hero card">
-      <div class="hero-copy">
-        <p class="eyebrow">Student analytics dashboard</p>
-        <h1>Track student performance at a glance</h1>
-        <p class="lead">
-          Filter classes, compare trends, and identify students who need support — all in one simple dashboard.
-        </p>
+  <!-- CHARTS -->
+  <div class="section-head">
+    <h2>Charts</h2>
+    <p>Visual breakdown of performance, attendance correlation, and band distribution.</p>
+  </div>
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="section-head"><h2>Avg Marks by Class</h2></div>
+      <canvas id="chart-marks"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="section-head"><h2>Performance Bands</h2></div>
+      <canvas id="chart-bands"></canvas>
+    </div>
+    <div class="chart-card chart-full">
+      <div class="section-head"><h2>Attendance vs Marks</h2><p>Each dot is a student — hover for details</p></div>
+      <canvas id="chart-scatter" style="max-height:260px"></canvas>
+    </div>
+  </div>
 
-        <div class="hero-actions">
-          <a href="#filters" class="btn btn-primary">Explore Dashboard</a>
-          <button id="exportCsvHero" class="btn btn-ghost">Export Data</button>
+  <!-- INSIGHTS -->
+  <div class="section-head"><h2>Insights</h2><p>Auto-generated observations from the current dataset.</p></div>
+  <div class="insights-grid">
+    <div class="insight-card">
+      <div class="insight-icon" style="background:rgba(110,231,183,0.1)">🏆</div>
+      <div><h4>Top Class</h4><p id="ins-top">—</p></div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon" style="background:rgba(248,113,113,0.1)">⚠️</div>
+      <div><h4>At-Risk Rate</h4><p id="ins-risk">—</p></div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon" style="background:rgba(129,140,248,0.1)">📈</div>
+      <div><h4>Attendance Correlation</h4><p id="ins-corr">—</p></div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon" style="background:rgba(251,146,60,0.1)">📚</div>
+      <div><h4>Study Hours</h4><p id="ins-hours">—</p></div>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="section-head"><h2>Student Records</h2><p>Full roster — click a row to edit or delete.</p></div>
+  <div class="table-wrap">
+    <div class="table-search">
+      <input type="text" id="search-input" placeholder="Search by name or ID…" oninput="applyFilters()"/>
+      <span id="table-count" style="color:var(--muted);font-size:0.8rem;white-space:nowrap"></span>
+      <button class="btn btn-ghost" style="font-size:0.78rem" onclick="clearAllData()">🗑 Clear All</button>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th><th>Name</th><th>Class</th>
+            <th>Marks</th><th>Attendance</th><th>Study Hrs</th><th>Band</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+          <tr><td colspan="8" class="empty-state">No data — click <strong>+ Add Student</strong>, <strong>Import CSV</strong>, or <strong>Seed Data</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <span id="page-info">–</span>
+      <div class="page-btns" id="page-btns"></div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+
+<!-- ========== ADD STUDENT MODAL ========== -->
+<div class="modal-overlay" id="add-modal" onclick="closeModalOutside(event,'add-modal')">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-title">Add New Student</h3>
+      <button class="modal-close" onclick="closeModal('add-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-id"/>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Full Name <span class="req">*</span></label>
+          <input type="text" id="inp-name" placeholder="e.g. Priya Sharma" maxlength="50"/>
+          <span class="field-error" id="err-name"></span>
         </div>
-
-        <div class="hero-tags">
-          <span>Fast filtering</span>
-          <span>Responsive charts</span>
-          <span>Simple insights</span>
+        <div class="form-group">
+          <label>Class <span class="req">*</span></label>
+          <input type="text" id="inp-class" placeholder="e.g. Class A" maxlength="20" list="class-suggestions"/>
+          <datalist id="class-suggestions"></datalist>
+          <span class="field-error" id="err-class"></span>
         </div>
       </div>
-
-      <aside class="hero-panel">
-        <div class="hero-panel-badge">Quick guide</div>
-        <h2>How to get started</h2>
-        <ol>
-          <li>Choose a class or band.</li>
-          <li>Review the KPI summary.</li>
-          <li>Check charts and insights.</li>
-        </ol>
-
-        <div class="hero-panel-stats">
-          <div><strong id="heroStat1">0</strong><span>Students</span></div>
-          <div><strong id="heroStat2">0</strong><span>Filters</span></div>
-          <div><strong id="heroStat3">0</strong><span>Export</span></div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Marks (0–100) <span class="req">*</span></label>
+          <input type="number" id="inp-marks" placeholder="e.g. 78" min="0" max="100"/>
+          <span class="field-error" id="err-marks"></span>
         </div>
-      </aside>
-    </section>
-
-    <section id="filters" class="filters card">
-      <div class="section-head">
-        <div>
-          <h2>Filter data</h2>
-          <p>Use these controls to focus on the records you want to review.</p>
+        <div class="form-group">
+          <label>Attendance % (0–100) <span class="req">*</span></label>
+          <input type="number" id="inp-attend" placeholder="e.g. 85" min="0" max="100"/>
+          <span class="field-error" id="err-attend"></span>
         </div>
       </div>
-      <div class="filter-grid">
-        <label>Class<select id="classFilter"></select></label>
-        <label>Band<select id="bandFilter"></select></label>
-        <label>Attendance<select id="attendanceFilter"></select></label>
-        <label>Sort<select id="sortFilter"><option value="marks-desc">Marks high to low</option><option value="attendance-desc">Attendance high to low</option><option value="study-desc">Study hours high to low</option></select></label>
-      </div>
-    </section>
-
-    <section class="kpis">
-      <article class="card kpi"><span>Total Students</span><strong id="kpiStudents">0</strong><small id="kpiStudentsNote">Current view</small></article>
-      <article class="card kpi"><span>Average Marks</span><strong id="kpiMarks">0%</strong><small id="kpiMarksNote">Current view</small></article>
-      <article class="card kpi"><span>Average Attendance</span><strong id="kpiAttendance">0%</strong><small id="kpiAttendanceNote">Current view</small></article>
-      <article class="card kpi"><span>At-Risk Students</span><strong id="kpiRisk">0</strong><small id="kpiRiskNote">Need support</small></article>
-    </section>
-
-    <section class="content-grid">
-      <div class="stack">
-        <article class="card chart-card"><div class="section-head"><div><h2>Average marks by class</h2><p>This bar chart compares academic performance between classes.</p></div></div><div id="marksByClass" class="chart"></div></article>
-        <article class="card chart-card"><div class="section-head"><div><h2>Attendance vs marks</h2><p>See whether attendance and marks move together.</p></div></div><div id="attendanceScatter" class="chart"></div></article>
-      </div>
-      <div class="stack">
-        <article class="card chart-card"><div class="section-head"><div><h2>Performance bands</h2><p>Shows how many students need support or are doing well.</p></div></div><div id="performanceBand" class="chart"></div></article>
-        <article class="card insight-card"><div class="section-head"><div><h2>Simple insights</h2><p>These notes explain the data in plain language.</p></div></div><div id="insights" class="insight-list"></div></article>
-      </div>
-    </section>
-
-    <section class="card chart-card">
-      <div class="section-head"><div><h2>Study hours by performance band</h2><p>This box plot shows the spread of study effort across performance groups.</p></div></div>
-      <div id="studyHoursBox" class="chart"></div>
-    </section>
-
-    <section class="card table-card">
-      <div class="section-head">
-        <div>
-          <h2>Student records</h2>
-          <p id="tableSummary"></p>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Study Hours / week (1–20)</label>
+          <input type="number" id="inp-hours" placeholder="e.g. 6" min="1" max="20"/>
+        </div>
+        <div class="form-group">
+          <label>Band (auto-assigned)</label>
+          <div class="band-preview" id="band-preview">—</div>
         </div>
       </div>
-      <div class="table-wrap"><table><thead><tr><th>ID</th><th>Name</th><th>Class</th><th>Marks</th><th>Attendance</th><th>Study Hours</th><th>Band</th></tr></thead><tbody id="studentTable"></tbody></table></div>
-    </section>
-  </main>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('add-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitStudent()">Save Student</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== CSV IMPORT MODAL ========== -->
+<div class="modal-overlay" id="csv-modal" onclick="closeModalOutside(event,'csv-modal')">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Import CSV</h3>
+      <button class="modal-close" onclick="closeModal('csv-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem">
+        Upload a CSV file. Expected columns (in any order):<br>
+        <code>name, class, marks, attendance, study_hours</code><br>
+        <em>ID and Band are auto-generated.</em>
+      </p>
+      <div class="drop-zone" id="drop-zone"
+        ondragover="event.preventDefault();this.classList.add('drag-over')"
+        ondragleave="this.classList.remove('drag-over')"
+        ondrop="handleDrop(event)">
+        <div class="drop-icon">📂</div>
+        <p>Drag &amp; drop CSV here</p>
+        <p style="color:var(--muted);font-size:0.8rem">or</p>
+        <label class="btn btn-ghost" style="cursor:pointer">
+          Browse File
+          <input type="file" id="csv-file-input" accept=".csv" style="display:none" onchange="handleFileSelect(event)"/>
+        </label>
+      </div>
+      <div id="csv-preview"></div>
+      <div class="form-group" style="margin-top:1rem">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem">
+          <input type="checkbox" id="csv-append" checked style="accent-color:var(--accent2)"/>
+          Append to existing data (uncheck to replace)
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('csv-modal')">Cancel</button>
+      <button class="btn btn-primary" id="csv-import-btn" onclick="importCSV()" disabled>Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== TOAST ========== -->
+<div class="toast" id="toast"></div>
+
+<script src="script.js"></script>
 </body>
 </html>
