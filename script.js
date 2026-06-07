@@ -1,5 +1,5 @@
 const API_BASE = "http://localhost:5000"; // Flask server (optional)
-const USE_API  = true;                   // Set true to enable backend sync
+const USE_API  = false;                   // Set true to enable backend sync
 const PAGE_SIZE = 10;
 
 /* ---- STATE ---- */
